@@ -39,6 +39,7 @@ interface AppContextType {
   addComment: (projectId: string, taskId: string, comment: Omit<Comment, 'id' | 'createdAt'>) => Promise<void>;
   addActivity: (activity: Pick<Activity, 'type' | 'targetId' | 'targetName'>) => Promise<void>;
   uploadFile: (projectId: string, file: File) => Promise<void>;
+  deleteFile: (projectId: string, fileId: string) => Promise<void>;
   addProjectChat: (projectId: string, chat: { text: string }) => Promise<void>;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   refetchProjects: () => Promise<void>;
@@ -46,7 +47,9 @@ interface AppContextType {
   refetchUsers: () => Promise<void>;
   refetchTimesheets: () => Promise<void>;
   refetchNotifications: () => Promise<void>;
+  refetchActivities: () => Promise<void>;
   addTaskAttachment: (projectId: string, taskId: string, file: File) => Promise<void>;
+  deleteTaskAttachment: (projectId: string, taskId: string, attachId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -59,7 +62,7 @@ const mapProject = (p: any): Project => ({
   id: p._id || p.id,
   members: (p.members || []).map((m: any) => (typeof m === 'object' ? m._id || m.id : m)),
   tasks: (p.tasks || []).map((t: any) => mapTask(t, p._id || p.id)),
-  files: (p.files || []).map(mapId),
+  files: (p.files || []).map((f: any) => ({ ...mapId(f), uploadedAt: f.uploadedAt || f.createdAt })),
   chats: (p.chats || []).map(mapId),
   activity: (p.activity || []).map(mapId),
 });
@@ -74,7 +77,7 @@ const mapTask = (t: any, projectId?: string): Task => ({
     id: c._id || c.id,
     userId: typeof c.userId === 'object' ? c.userId._id || c.userId.id : c.userId,
   })),
-  attachments: (t.attachments || []).map(mapId),
+  attachments: (t.attachments || []).map((a: any) => ({ ...mapId(a), uploadedAt: a.uploadedAt || a.createdAt })),
   subtasks: (t.subtasks || []).map(mapId),
 });
 const mapUser = (u: any): User => ({
@@ -199,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await projectApi.create(projectData);
       const created = mapProject(res.data);
       setProjects(prev => [...prev, created]);
+      await refetchActivities();
       showToast('Project created successfully');
       return created;
     } catch (err: any) { showToast(err.message || 'Failed to create project', 'error'); throw err; }
@@ -208,6 +212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await projectApi.update(project.id, project);
       await refetchProjects();
+      await refetchActivities();
       showToast('Project updated successfully');
     } catch (err: any) { showToast(err.message || 'Failed to update project', 'error'); throw err; }
   };
@@ -218,6 +223,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setProjects(prev => prev.filter(p => p.id !== id));
       setTasks(prev => prev.filter(t => t.projectId !== id));
       setTimesheets(prev => prev.filter(t => t.projectId !== id));
+      await refetchActivities();
       showToast('Project deleted successfully');
     } catch (err: any) { showToast(err.message || 'Failed to delete project', 'error'); throw err; }
   };
@@ -227,6 +233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await taskApi.create(projectId, taskData);
       await refetchTasks();
+      await refetchActivities();
       showToast('Task added successfully');
     } catch (err: any) { showToast(err.message || 'Failed to add task', 'error'); throw err; }
   };
@@ -235,25 +242,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await taskApi.update(projectId, task.id, task);
       await refetchTasks();
+      await refetchActivities();
       showToast('Task updated successfully');
     } catch (err: any) { showToast(err.message || 'Failed to update task', 'error'); throw err; }
   };
 
   const updateTaskStatus = async (taskId: string, status: string, projectId: string) => {
+    // Optimistic Update
+    setTasks(prevTasks => {
+      const newTasks = prevTasks.map(t => t.id === taskId ? { ...t, status: status as any } : t);
+      setProjects(prevProjects => prevProjects.map(p => {
+        if (p.id !== projectId) return p;
+        const pTasks = newTasks.filter(t => t.projectId === projectId);
+        const done = pTasks.filter(t => t.status === 'done').length;
+        return { ...p, progress: pTasks.length ? Math.round((done / pTasks.length) * 100) : 0 };
+      }));
+      return newTasks;
+    });
+
     try {
       await taskApi.updateStatus(projectId, taskId, status);
-      // Optimistically update local state for instant Kanban feel
-      setTasks(prevTasks => {
-        const newTasks = prevTasks.map(t => t.id === taskId ? { ...t, status: status as any } : t);
-        setProjects(prevProjects => prevProjects.map(p => {
-          if (p.id !== projectId) return p;
-          const pTasks = newTasks.filter(t => t.projectId === projectId);
-          const done = pTasks.filter(t => t.status === 'done').length;
-          return { ...p, progress: pTasks.length ? Math.round((done / pTasks.length) * 100) : 0 };
-        }));
-        return newTasks;
-      });
-    } catch (err: any) { showToast(err.message || 'Failed to update status', 'error'); }
+      await refetchActivities();
+    } catch (err: any) {
+      // Rollback on error
+      await refetchTasks();
+      await refetchProjects();
+      showToast(err.message || 'Failed to update status', 'error');
+    }
   };
 
   const deleteTask = async (projectId: string, taskId: string) => {
@@ -269,6 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         return newTasks;
       });
+      await refetchActivities();
       showToast('Task deleted successfully');
     } catch (err: any) { showToast(err.message || 'Failed to delete task', 'error'); }
   };
@@ -278,6 +294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await userApi.create({ ...userData, password: userData.password || 'ProFlow@123' });
       await refetchUsers();
+      await refetchActivities();
       showToast('Team member added successfully');
     } catch (err: any) { showToast(err.message || 'Failed to add member', 'error'); throw err; }
   };
@@ -286,6 +303,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await userApi.update(updatedUser.id, updatedUser);
       await refetchUsers();
+      await refetchActivities();
       showToast('Member updated successfully');
     } catch (err: any) { showToast(err.message || 'Failed to update member', 'error'); throw err; }
   };
@@ -294,6 +312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await userApi.delete(id);
       setUsers(prev => prev.filter(u => u.id !== id));
+      await refetchActivities();
       showToast('Member removed successfully');
     } catch (err: any) { showToast(err.message || 'Failed to remove member', 'error'); }
   };
@@ -337,6 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await taskApi.addComment(projectId, taskId, comment.text);
       await refetchProjects();
       await refetchTasks();
+      await refetchActivities();
     } catch (err: any) { showToast(err.message || 'Failed to add comment', 'error'); throw err; }
   };
 
@@ -353,8 +373,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       formData.append('file', file);
       await projectApi.uploadFile(projectId, formData);
       await refetchProjects();
+      await refetchActivities();
       showToast('File uploaded successfully');
     } catch (err: any) { showToast(err.message || 'Failed to upload file', 'error'); throw err; }
+  };
+
+  const deleteFile = async (projectId: string, fileId: string) => {
+    try {
+      await projectApi.deleteFile(projectId, fileId);
+      await refetchProjects();
+      await refetchActivities();
+      showToast('File deleted successfully');
+    } catch (err: any) { showToast(err.message || 'Failed to delete file', 'error'); throw err; }
   };
 
   const addTaskAttachment = async (projectId: string, taskId: string, file: File) => {
@@ -363,8 +393,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       formData.append('file', file);
       await taskApi.addAttachment(projectId, taskId, formData);
       await refetchTasks();
+      await refetchActivities();
       showToast('Attachment added successfully');
     } catch (err: any) { showToast(err.message || 'Failed to add attachment', 'error'); throw err; }
+  };
+
+  const deleteTaskAttachment = async (projectId: string, taskId: string, attachId: string) => {
+    try {
+      await taskApi.deleteAttachment(projectId, taskId, attachId);
+      await refetchTasks();
+      await refetchActivities();
+      showToast('Attachment deleted successfully');
+    } catch (err: any) { showToast(err.message || 'Failed to delete attachment', 'error'); throw err; }
   };
 
   // ── Chat ──────────────────────────────────────────────────────────────────────
@@ -372,6 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       await projectApi.sendChat(projectId, chat.text);
       await refetchProjects();
+      await refetchActivities();
     } catch (err: any) { showToast(err.message || 'Failed to send message', 'error'); throw err; }
   };
 
@@ -410,7 +451,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addComment,
       addActivity,
       uploadFile,
+      deleteFile,
       addTaskAttachment,
+      deleteTaskAttachment,
       addProjectChat,
       showToast,
       refetchProjects,
@@ -418,6 +461,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refetchUsers,
       refetchTimesheets,
       refetchNotifications,
+      refetchActivities,
     }}>
       {children}
 

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { 
-  TrendingUp, 
-  Clock, 
-  CheckCircle2, 
+import {
+  TrendingUp,
+  Clock,
+  CheckCircle2,
   AlertCircle,
   ArrowRight,
   Calendar,
@@ -21,14 +21,14 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  Title, 
-  Tooltip, 
-  Legend, 
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
   ArcElement,
   PointElement,
   LineElement
@@ -54,7 +54,7 @@ export const Dashboard: React.FC = () => {
   const { projects, users, activities, tasks } = useAppContext();
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState('Last 7 Days');
-  
+
   const completedTasks = tasks.filter(t => t.status === 'done').length;
   const inProgressTasks = tasks.filter(t => t.status === 'in-progress').length;
   const todoTasks = tasks.filter(t => t.status === 'todo').length;
@@ -70,12 +70,12 @@ export const Dashboard: React.FC = () => {
     if (user?.role === 'Super Admin') {
       return [
         // { label: 'Total Organizations', value: 12, icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+2' },
-         { label: 'Total Projects', value: projects.length, icon: Layout, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+8%' },
+        { label: 'Total Projects', value: projects.length, icon: Layout, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+8%' },
         { label: 'Total Users', value: users.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+15%' },
         { label: 'System Health', value: '99.9%', icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50', trend: 'Stable' },
       ];
     }
-    
+
     if (user?.role === 'Admin') {
       return [
         { label: 'Team Projects', value: projects.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+12%' },
@@ -127,16 +127,16 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-            {user?.role === 'Super Admin' ? 'System Overview' : 
-             user?.role === 'Admin' ? 'Organization Dashboard' : 'My Workspace'}
+            {user?.role === 'Super Admin' ? 'System Overview' :
+              user?.role === 'Admin' ? 'Organization Dashboard' : 'My Workspace'}
           </h1>
           <p className="text-slate-500 mt-1">
-            {user?.role === 'Super Admin' ? 'Manage global organizations and system health.' : 
-             user?.role === 'Admin' ? "Welcome back! Here's what's happening across your team." : 
-             "Welcome back! Here's a summary of your assigned work."}
+            {user?.role === 'Super Admin' ? 'Manage global organizations and system health.' :
+              user?.role === 'Admin' ? "Welcome back! Here's what's happening across your team." :
+                "Welcome back! Here's a summary of your assigned work."}
           </p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative group">
             <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-all text-sm font-medium text-slate-600">
@@ -145,14 +145,14 @@ export const Dashboard: React.FC = () => {
               <Filter size={14} className="ml-1 text-slate-400" />
             </button>
           </div>
-          
+
           {/* {user?.role !== 'Employee' && (
             <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">
               <Plus size={18} />
               New Project
             </button>
           )} */}
-          
+
           {/* <button className="bg-white text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm">
             <Plus size={18} />
             {user?.role === 'Super Admin' ? 'Add Admin' : 'Add Task'}
@@ -176,8 +176,8 @@ export const Dashboard: React.FC = () => {
               </div>
               <span className={cn(
                 "text-xs font-bold px-2 py-1 rounded-lg",
-                stat.trend.startsWith('+') ? "bg-emerald-50 text-emerald-600" : 
-                stat.trend.includes('Stable') || stat.trend.includes('Active') ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
+                stat.trend.startsWith('+') ? "bg-emerald-50 text-emerald-600" :
+                  stat.trend.includes('Stable') || stat.trend.includes('Active') ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
               )}>
                 {stat.trend}
               </span>
@@ -205,17 +205,17 @@ export const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="h-64">
-                <Bar 
-                  data={barData} 
-                  options={{ 
-                    responsive: true, 
+                <Bar
+                  data={barData}
+                  options={{
+                    responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { 
+                    scales: {
                       y: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' } },
                       x: { grid: { display: false } }
                     }
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -228,13 +228,13 @@ export const Dashboard: React.FC = () => {
                 </button>
               </div>
               <div className="h-64 flex justify-center">
-                <Pie 
-                  data={pieData} 
-                  options={{ 
-                    responsive: true, 
+                <Pie
+                  data={pieData}
+                  options={{
+                    responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'bottom' as const, labels: { usePointStyle: true, padding: 20 } } }
-                  }} 
+                  }}
                 />
               </div>
             </div>
@@ -253,15 +253,15 @@ export const Dashboard: React.FC = () => {
                 View All <ChevronRight size={14} />
               </button>
             </div>
-            
-            <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+
+            <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 custom-scrollbar" style={{ maxHeight: "300px", overflowY: "auto" }}>
               {activities.slice(0, 5).map((activity, idx) => {
                 const activityUser = users.find(u => u.id === activity.userId);
                 return (
                   <div key={activity.id} className="flex gap-4 relative z-10">
-                    <MemberAvatar 
-                      user={activityUser} 
-                      size="md" 
+                    <MemberAvatar
+                      user={activityUser}
+                      size="md"
                       className="flex-shrink-0 z-10"
                     />
                     <div className="flex-1 pt-1">
@@ -295,21 +295,21 @@ export const Dashboard: React.FC = () => {
               </div>
               <h2 className="text-lg font-bold text-slate-900">Project Health</h2>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 custom-scrollbar" style={{ maxHeight: "254px", overflowY: "auto", minHeight: "254px" }}>
               {projects.slice(0, 5).map(project => (
                 <div key={project.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-2.5 h-2.5 rounded-full",
-                      project.health === 'Healthy' ? "bg-emerald-500" : 
-                      project.health === 'At Risk' ? "bg-amber-500" : "bg-rose-500"
+                      project.health === 'Healthy' ? "bg-emerald-500" :
+                        project.health === 'At Risk' ? "bg-amber-500" : "bg-rose-500"
                     )} />
                     <span className="text-sm font-bold text-slate-700">{project.name}</span>
                   </div>
                   <span className={cn(
                     "text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg",
-                    project.health === 'Healthy' ? "bg-emerald-50 text-emerald-600" : 
-                    project.health === 'At Risk' ? "bg-amber-50 text-amber-600" : "bg-rose-50 text-rose-600"
+                    project.health === 'Healthy' ? "bg-emerald-50 text-emerald-600" :
+                      project.health === 'At Risk' ? "bg-amber-50 text-amber-600" : "bg-rose-50 text-rose-600"
                   )}>
                     {project.health}
                   </span>
@@ -354,7 +354,7 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-bold text-slate-900">Team Workload</h2>
               </div>
-              <div className="space-y-5">
+              <div className="space-y-5 custom-scrollbar" style={{ maxHeight: "254px", overflowY: "auto" }}>
                 {users.slice(0, 4).map(teamUser => (
                   <div key={teamUser.id} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -364,13 +364,13 @@ export const Dashboard: React.FC = () => {
                       <span className="text-[10px] font-bold text-slate-500">{teamUser.workload}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${teamUser.workload}%` }}
                         className={cn(
                           "h-full rounded-full",
-                          (teamUser.workload || 0) > 80 ? "bg-rose-500" : 
-                          (teamUser.workload || 0) > 50 ? "bg-amber-500" : "bg-emerald-500"
+                          (teamUser.workload || 0) > 80 ? "bg-rose-500" :
+                            (teamUser.workload || 0) > 50 ? "bg-amber-500" : "bg-emerald-500"
                         )}
                       />
                     </div>

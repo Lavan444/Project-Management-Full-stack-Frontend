@@ -75,7 +75,7 @@ export const MultiSelectMembers: React.FC<MultiSelectMembersProps> = ({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center gap-1.5 bg-whiste bordesr bordesr-slate-200 rounded-full shadow-sm"
+              className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-full shadow-sm"
             >
             
               <div className="relative group">
@@ -83,7 +83,7 @@ export const MultiSelectMembers: React.FC<MultiSelectMembersProps> = ({
 
                 <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 
                 whitespace-nowrap bg-slate-900 text-white text-xs px-2 py-1 rounded 
-                opacity-0 group-hover:opacity-100 pointer-events-none transition">
+                opacity-0 group-hover:opacity-100 pointer-events-none transition z-50">
                   {user.name}
                 </div>
               </div>
@@ -95,7 +95,7 @@ export const MultiSelectMembers: React.FC<MultiSelectMembersProps> = ({
                   e.stopPropagation();
                   removeUser(user.id, e);
                 }}
-                className="p-0.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-rose-500 transition-colors"
+                className="p-1 hover:bg-slate-50 rounded-full text-slate-400 hover:text-rose-500 transition-colors mr-1"
               >
                 <X size={12} />
               </button>

@@ -42,7 +42,7 @@ export const Register: React.FC = () => {
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">PMS APP</h1>
           </div>
           <h2 className="text-xl font-bold text-slate-900">Create Account</h2>
-          <p className="text-slate-500 mt-2">Join ProFlow to streamline your workflow</p>
+          <p className="text-slate-500 mt-2">Join PMS APP to streamline your workflow</p>
         </div>
 
         {errorMsg && (

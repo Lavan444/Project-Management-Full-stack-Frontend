@@ -31,9 +31,36 @@ import { MemberAvatar } from '../components/MemberAvatar';
 import { AvatarGroup } from '../components/AvatarGroup';
 import { MultiSelectMembers } from '../components/MultiSelectMembers';
 import { FileUploader } from '../components/FileUploader';
+import { CustomSelect } from '../components/CustomSelect';
+
+const PROJECT_STATUS_OPTIONS = [
+  { value: 'Active', label: 'Active', color: 'bg-blue-500' },
+  { value: 'On Hold', label: 'On Hold', color: 'bg-amber-500' },
+  { value: 'Completed', label: 'Completed', color: 'bg-emerald-500' },
+  { value: 'At Risk', label: 'At Risk', color: 'bg-rose-500' },
+];
+
+const HEALTH_OPTIONS = [
+  { value: 'Healthy', label: 'Healthy', color: 'text-emerald-500', icon: <Heart size={16} fill="currentColor" /> },
+  { value: 'At Risk', label: 'At Risk', color: 'text-amber-500', icon: <Heart size={16} fill="currentColor" /> },
+  { value: 'Critical', label: 'Critical', color: 'text-rose-500', icon: <Heart size={16} fill="currentColor" /> },
+];
+
+const TASK_STATUS_OPTIONS = [
+  { value: 'todo', label: 'To Do', color: 'bg-slate-300' },
+  { value: 'in-progress', label: 'In Progress', color: 'bg-blue-500' },
+  { value: 'review', label: 'Review', color: 'bg-amber-500' },
+  { value: 'done', label: 'Done', color: 'bg-emerald-500' },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low', color: 'text-emerald-500', icon: <Flag size={14} /> },
+  { value: 'medium', label: 'Medium', color: 'text-amber-500', icon: <Flag size={14} /> },
+  { value: 'high', label: 'High', color: 'text-rose-500', icon: <Flag size={14} /> },
+];
 
 export const Projects: React.FC = () => {
-  const { projects, users, addProject, updateProject, deleteProject, addTask } = useAppContext();
+  const { projects, users, addProject, updateProject, deleteProject, addTask, uploadFile } = useAppContext();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -74,10 +101,17 @@ export const Projects: React.FC = () => {
         description: project.description,
         status: project.status,
         health: project.health,
-        startDate: project.startDate,
-        endDate: project.endDate,
+        startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : '',
+        endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : '',
         members: project.members,
-        attachments: [],
+        attachments: (project.files || []).map(f => ({
+          id: f.id,
+          name: f.name,
+          url: (f as any).url || '',
+          type: f.type,
+          size: f.size,
+          uploadedAt: f.uploadedAt
+        })),
         tasks: project.tasks || []
       });
     } else {
@@ -126,10 +160,18 @@ export const Projects: React.FC = () => {
           ...formData,
           tasks: editingProject.tasks,
         });
+
+        // Upload new attachments
+        for (const att of formData.attachments) {
+          if (att.file) {
+            await uploadFile(editingProject.id, att.file);
+          }
+        }
+
         setIsModalOpen(false);
       }
     } else {
-      // Create mode — let the backend assign the real MongoDB ObjectId
+      // Create mode
       try {
         const created = await addProject({
           organizationId: user?.organizationId || '',
@@ -144,6 +186,14 @@ export const Projects: React.FC = () => {
           tasks: [],
           files: []
         });
+
+        // Upload attachments
+        for (const att of formData.attachments) {
+          if (att.file) {
+            await uploadFile(created.id, att.file);
+          }
+        }
+
         // Use the real project with its backend-assigned _id for the task step
         setEditingProject(created);
         setIsNewlyCreated(true);
@@ -484,19 +534,13 @@ export const Projects: React.FC = () => {
                         value={formData.name}
                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                       />
-                      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white font-bold text-sm text-slate-700 shadow-sm whitespace-nowrap -mt-1">
-                        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", getStatusDotColor(formData.status))} />
-                        <select
-                          className="appearance-none bg-transparent outline-none pr-4 cursor-pointer"
+                      <div className="relative flex items-center gap-1.5 px-1 py-1 rounded-full border border-slate-200 bg-white font-bold text-sm text-slate-700 shadow-sm whitespace-nowrap -mt-1 min-w-[130px]">
+                        <CustomSelect
+                          options={PROJECT_STATUS_OPTIONS}
                           value={formData.status}
-                          onChange={e => setFormData({ ...formData, status: e.target.value as ProjectStatus })}
-                        >
-                          <option value="Active">Active</option>
-                          <option value="On Hold">On Hold</option>
-                          <option value="Completed">Completed</option>
-                          <option value="At Risk">At Risk</option>
-                        </select>
-                        <ChevronDown size={14} className="absolute right-2 text-slate-400 pointer-events-none" />
+                          onChange={val => setFormData({ ...formData, status: val as ProjectStatus })}
+                          className="border-none bg-transparent hover:bg-transparent px-0 py-0"
+                        />
                       </div>
                     </div>
                     <textarea
@@ -532,19 +576,12 @@ export const Projects: React.FC = () => {
                           <Heart size={20} fill="currentColor" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Health</p>
-                          <div className="relative">
-                            <select
-                              className="w-full appearance-none bg-transparent text-sm font-bold text-slate-900 outline-none cursor-pointer"
-                              value={formData.health}
-                              onChange={e => setFormData({ ...formData, health: e.target.value as ProjectHealth })}
-                            >
-                              <option value="Healthy">Healthy</option>
-                              <option value="At Risk">At Risk</option>
-                              <option value="Critical">Critical</option>
-                            </select>
-                            <ChevronDown size={14} className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                          </div>
+                          <CustomSelect
+                            label="Health"
+                            options={HEALTH_OPTIONS}
+                            value={formData.health}
+                            onChange={val => setFormData({ ...formData, health: val as ProjectHealth })}
+                          />
                         </div>
                       </div>
 
@@ -597,23 +634,19 @@ export const Projects: React.FC = () => {
                       />
                     </div>
 
-                    {!editingProject && (
-                      <>
-                        <div className="h-px bg-slate-100 mt-8 mb-8" />
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="p-1.5 bg-slate-50 text-orange-400 rounded-lg">
-                              <Paperclip size={16} />
-                            </div>
-                            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Attachments</p>
-                          </div>
-                          <FileUploader
-                            attachments={formData.attachments}
-                            onChange={(attachments) => setFormData({ ...formData, attachments })}
-                          />
+                    <div className="h-px bg-slate-100 mt-8 mb-8" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-1.5 bg-slate-50 text-orange-400 rounded-lg">
+                          <Paperclip size={16} />
                         </div>
-                      </>
-                    )}
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Attachments</p>
+                      </div>
+                      <FileUploader
+                        attachments={formData.attachments}
+                        onChange={(attachments) => setFormData({ ...formData, attachments })}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -646,19 +679,17 @@ export const Projects: React.FC = () => {
                             <div className="w-8 h-8 rounded-xl bg-slate-50 flex flex-shrink-0 items-center justify-center group-hover:bg-slate-100 transition-colors">
                               <div className={cn("w-2.5 h-2.5 rounded-full animate-pulse", getStatusDotColor(task.status || 'todo'))} />
                             </div>
-                            <div className="flex-1 relative">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Status</p>
-                              <select className="w-full appearance-none bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer" value={task.status || 'todo'} onChange={e => {
-                                const newTasks = [...formData.tasks];
-                                newTasks[idx].status = e.target.value as Status;
-                                setFormData({ ...formData, tasks: newTasks });
-                              }}>
-                                <option value="todo">To Do</option>
-                                <option value="in-progress">In Progress</option>
-                                <option value="review">Review</option>
-                                <option value="done">Done</option>
-                              </select>
-                              <ChevronDown size={14} className="absolute right-0 top-1 text-slate-300 pointer-events-none" />
+                            <div className="flex-1">
+                              <CustomSelect
+                                label="Status"
+                                options={TASK_STATUS_OPTIONS}
+                                value={task.status || 'todo'}
+                                onChange={val => {
+                                  const newTasks = [...formData.tasks];
+                                  newTasks[idx].status = val as Status;
+                                  setFormData({ ...formData, tasks: newTasks });
+                                }}
+                              />
                             </div>
                           </div>
 
@@ -666,18 +697,17 @@ export const Projects: React.FC = () => {
                             <div className="w-8 h-8 rounded-xl bg-slate-50 flex flex-shrink-0 items-center justify-center group-hover:bg-slate-100 transition-colors">
                               <Flag size={14} className={cn(getPriorityColor(task.priority || 'medium').split(' ')[0])} />
                             </div>
-                            <div className="flex-1 relative">
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Priority</p>
-                              <select className="w-full appearance-none bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer" value={task.priority || 'medium'} onChange={e => {
-                                const newTasks = [...formData.tasks];
-                                newTasks[idx].priority = e.target.value as Priority;
-                                setFormData({ ...formData, tasks: newTasks });
-                              }}>
-                                <option value="low">Low Priority</option>
-                                <option value="medium">Medium Priority</option>
-                                <option value="high">High Priority</option>
-                              </select>
-                              <ChevronDown size={14} className="absolute right-0 top-1 text-slate-300 pointer-events-none" />
+                            <div className="flex-1">
+                               <CustomSelect
+                                label="Priority"
+                                options={PRIORITY_OPTIONS}
+                                value={task.priority || 'medium'}
+                                onChange={val => {
+                                  const newTasks = [...formData.tasks];
+                                  newTasks[idx].priority = val as Priority;
+                                  setFormData({ ...formData, tasks: newTasks });
+                                }}
+                              />
                             </div>
                           </div>
                         </div>

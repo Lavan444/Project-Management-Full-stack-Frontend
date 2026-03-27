@@ -94,7 +94,7 @@ export const Tasks: React.FC = () => {
         description: task.description,
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
         assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
         attachments: task.attachments || [],
         subtasks: task.subtasks || []

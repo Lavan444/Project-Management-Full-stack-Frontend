@@ -1,9 +1,9 @@
 /**
  * Central API service that communicates with the ProFlow backend.
- * All requests go through /api (proxied by Vite to http://localhost:5000/api in dev).
+ * All requests go through /api (proxied by Vite to http://make:5000/api in dev).
  */
 
-const BASE_URL = '/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
 export const getToken = (): string | null => localStorage.getItem('proflow_token');
@@ -140,6 +140,8 @@ export const taskApi = {
 
   addAttachment: (projectId: string, taskId: string, formData: FormData) =>
     api.post<ApiResponse<any>>(`/projects/${projectId}/tasks/${taskId}/attachments`, formData),
+  deleteAttachment: (projectId: string, taskId: string, attachId: string) =>
+    api.delete<ApiResponse<null>>(`/projects/${projectId}/tasks/${taskId}/attachments/${attachId}`),
 };
 
 // ─── USERS ────────────────────────────────────────────────────────────────────

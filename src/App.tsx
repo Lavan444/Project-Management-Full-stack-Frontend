@@ -15,6 +15,7 @@ import { Timesheet } from './pages/Timesheet';
 import { Reports } from './pages/Reports';
 import { Settings } from './pages/Settings';
 import { Tasks } from './pages/Tasks';
+import { ResetPassword } from './pages/ResetPassword';
 import { Unauthorized } from './pages/Unauthorized';
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Protected Routes */}
@@ -36,7 +38,7 @@ export default function App() {
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/projects/:id" element={<ProjectDetails />} />
                 <Route path="/tasks" element={<Tasks />} />
-                
+
                 {/* Admin & Super Admin only */}
                 <Route element={<ProtectedRoute allowedRoles={['Super Admin', 'Admin']} />}>
                   <Route path="/team" element={<Team />} />
@@ -45,7 +47,7 @@ export default function App() {
 
                 <Route path="/timesheet" element={<Timesheet />} />
                 <Route path="/settings" element={<Settings />} />
-                
+
                 {/* Super Admin only */}
                 <Route element={<ProtectedRoute allowedRoles={['Super Admin']} />}>
                   {/* Add any super admin specific pages here if needed */}

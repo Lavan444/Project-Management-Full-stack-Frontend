@@ -31,6 +31,7 @@ export interface Attachment {
   type: string;
   size: string;
   uploadedAt: string;
+  file?: File; // For newly added files to be uploaded
 }
 
 export interface Task {
@@ -63,6 +64,7 @@ export interface Activity {
 export interface ProjectFile {
   id: string;
   name: string;
+  url: string;
   type: string;
   size: string;
   uploadedBy: string;

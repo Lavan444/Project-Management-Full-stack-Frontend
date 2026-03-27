@@ -66,7 +66,7 @@ export const ProjectDetails: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const initialTab = (searchParams.get('tab') as TabType) || 'tasks';
 
-  const { projects, users, tasks: allTasks, addTask, updateTask, updateTaskStatus, deleteTask, addComment, updateProject, addProjectChat } = useAppContext();
+  const { projects, users, tasks: allTasks, addTask, updateTask, updateTaskStatus, deleteTask, addComment, updateProject, addProjectChat, showToast, deleteFile, deleteTaskAttachment } = useAppContext();
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -86,6 +86,9 @@ export const ProjectDetails: React.FC = () => {
     attachments: [] as Attachment[]
   });
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionTriggerPos, setMentionTriggerPos] = useState(-1);
 
   const project = projects.find(p => p.id === id);
 
@@ -111,19 +114,24 @@ export const ProjectDetails: React.FC = () => {
 
   // Combine project native files with all task attachments
   const allProjectFiles = [
-    ...(project.files || []),
+    ...(project.files || []).map(f => ({ ...f, type: 'project' })),
     ...projectTasks.flatMap(task =>
       (task.attachments || []).map(att => ({
         id: att.id,
         name: att.name,
         type: att.type,
         size: att.size,
-        uploadedBy: task.assigneeIds?.[0] || 'Unknown',
+        uploadedBy: att.uploadedBy || (task.assigneeIds?.[0] || task.assigneeId),
         uploadedAt: att.uploadedAt,
-        taskId: task.id
+        taskId: task.id,
+        sourceType: 'task'
       }))
     )
-  ].sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+  ].sort((a, b) => {
+    const dateA = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+    const dateB = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+    return dateB - dateA;
+  });
 
   const handleOpenTaskModal = (task?: Task, status: Status = 'todo') => {
     if (task) {
@@ -133,7 +141,7 @@ export const ProjectDetails: React.FC = () => {
         description: task.description,
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate,
+        dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
         assigneeIds: task.assigneeIds || (task.assigneeId ? [task.assigneeId] : []),
         attachments: task.attachments || []
       });
@@ -181,6 +189,23 @@ export const ProjectDetails: React.FC = () => {
     setIsTaskModalOpen(false);
   };
 
+  const handleDownload = (file: any) => {
+    if (!file.url || file.url === '#') {
+      showToast('Download URL not available for this file', 'error');
+      return;
+    }
+
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = file.url;
+    link.setAttribute('download', file.name);
+    link.setAttribute('target', '_blank');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Downloading ${file.name}...`);
+  };
+
   const handlePostComment = async () => {
     if (!selectedTask || !commentText.trim() || !user) return;
 
@@ -197,6 +222,35 @@ export const ProjectDetails: React.FC = () => {
     } catch (error) {
       // Error is handled in the context.
     }
+  };
+
+  const handleChatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const selectionStart = e.target.selectionStart || 0;
+    setChatText(value);
+
+    // Check for @ mention trigger
+    const lastAtPos = value.lastIndexOf('@', selectionStart - 1);
+    if (lastAtPos !== -1) {
+      const textAfterAt = value.substring(lastAtPos + 1, selectionStart);
+      // If there's a space before @ or @ is at start, and no space in between
+      const isWordStart = lastAtPos === 0 || value[lastAtPos - 1] === ' ';
+      if (isWordStart && !textAfterAt.includes(' ')) {
+        setMentionSearch(textAfterAt);
+        setShowMentions(true);
+        setMentionTriggerPos(lastAtPos);
+        return;
+      }
+    }
+    setShowMentions(false);
+  };
+
+  const insertMention = (member: any) => {
+    const before = chatText.substring(0, mentionTriggerPos);
+    const after = chatText.substring(mentionTriggerPos + mentionSearch.length + 1);
+    setChatText(`${before}@${member.name} ${after}`);
+    setShowMentions(false);
+    // Focus back is handled by the input ref or standard state update
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -543,7 +597,7 @@ export const ProjectDetails: React.FC = () => {
 
                 <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
                   <h3 className="text-xl font-bold text-slate-900 mb-6">Recent Project Activity</h3>
-                  <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                  <div className="space-y-8 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100 custom-scrollbar" style={{ maxHeight: '400px', overflowY: 'auto', minHeight: '400px' }}>
                     {project.activity?.map(activity => {
                       const user = users.find(u => u.id === activity.userId);
                       return (
@@ -708,75 +762,88 @@ export const ProjectDetails: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {allProjectFiles.map(file => {
-                      const uploader = users.find(u => u.id === file.uploadedBy);
-                      return (
-                        <tr key={file.id} className="hover:bg-slate-50/30 transition-colors group">
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-4">
-                              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-100 transition-colors">
-                                <FileText size={20} />
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-900 cursor-pointer hover:text-indigo-600 transition-colors">{file.name}</p>
-                                <p className="text-xs text-slate-400">{format(new Date(file.uploadedAt), 'MMM d, yyyy')}</p>
-                              </div>
-                            </div>
-                          </td>
-                          {/* <td className="px-6 py-5">
-                            <span className="text-xs font-bold text-slate-500 uppercase">{file.type}</span>
-                          </td> */}
-                          <td className="px-6 py-5">
-                            <span className="text-xs font-medium text-slate-600">{file.size}</span>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-2">
-                              {uploader?.avatar ? (
-                                <img src={uploader.avatar} alt={uploader.name} className="w-6 h-6 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 text-[8px] font-bold text-slate-500">
-                                  {file.uploadedBy.substring(0, 2).toUpperCase()}
+                    {allProjectFiles.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-8 py-12 text-center text-slate-400">
+                          <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                          <p className="font-medium">No files attached to this project yet.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      allProjectFiles.map(file => {
+                        const uploader = users.find(u => u.id === file.uploadedBy);
+                        return (
+                          <tr key={file.id} className="hover:bg-slate-50/30 transition-colors group">
+                            <td className="px-8 py-5">
+                              <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-100 transition-colors">
+                                  <FileText size={20} />
                                 </div>
-                              )}
-                              <span className="text-xs font-medium text-slate-700">{uploader?.name || 'System / Task User'}</span>
-                            </div>
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* View Action opens external mapping */}
-                              {/* <button onClick={() => setSelectedFile(file)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
-                                <Eye size={18} />
-                              </button> */}
-                              <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
-                                <Download size={18} />
-                              </button>
-                              {canManageProject && (
+                                <div>
+                                  <p className="text-sm font-bold text-slate-900 cursor-pointer hover:text-indigo-600 transition-colors">{file.name}</p>
+                                  <p className="text-xs text-slate-400">{file.uploadedAt ? format(new Date(file.uploadedAt), 'MMM d, yyyy') : 'Recently uploaded'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            {/* <td className="px-6 py-5">
+                              <span className="text-xs font-bold text-slate-500 uppercase">{file.type}</span>
+                            </td> */}
+                            <td className="px-6 py-5">
+                              <span className="text-xs font-medium text-slate-600">{file.size}</span>
+                            </td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-2">
+                                {uploader?.avatar ? (
+                                  <img src={uploader.avatar} alt={uploader.name} className="w-6 h-6 rounded-full border border-slate-200" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200 text-[8px] font-bold text-slate-500">
+                                    {(file.uploadedBy || '??').substring(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className="text-xs font-medium text-slate-700">{uploader?.name || 'System / Task User'}</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {/* View Action opens external mapping */}
+                                {/* <button onClick={() => setSelectedFile(file)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
+                                  <Eye size={18} />
+                                </button> */}
                                 <button
-                                  onClick={() => {
-                                    // Implementation note: deletion removes it from the respective array it belongs to natively
-                                    if ('taskId' in file && file.taskId) {
-                                      const task = project.tasks.find(t => t.id === file.taskId);
-                                      if (task && task.attachments) {
-                                        task.attachments = task.attachments.filter(a => a.id !== file.id);
-                                        updateProject({ ...project, tasks: [...project.tasks] });
-                                      }
-                                    } else {
-                                      updateProject({
-                                        ...project,
-                                        files: project.files?.filter(f => f.id !== file.id)
-                                      });
-                                    }
-                                  }}
-                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all block lg:hidden group-hover:block"
+                                  onClick={() => handleDownload(file)}
+                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                                  title="Download File"
                                 >
-                                  <Trash2 size={18} />
+                                  <Download size={18} />
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                                {(() => {
+                                  const fileUploadedAt = file.uploadedAt ? new Date(file.uploadedAt) : null;
+                                  const isUploader = String(file.uploadedBy) === String(user?.id);
+                                  const within7Mins = fileUploadedAt ? (new Date().getTime() - fileUploadedAt.getTime()) < 7 * 60 * 1000 : false;
+                                  const canDeleteFile = canManageProject || (isUploader && within7Mins);
+
+                                  return canDeleteFile && (
+                                    <button
+                                      onClick={() => {
+                                        if (file.sourceType === 'task' && file.taskId) {
+                                          deleteTaskAttachment(project.id, file.taskId, file.id);
+                                        } else {
+                                          deleteFile(project.id, file.id);
+                                        }
+                                      }}
+                                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all block lg:hidden group-hover:block"
+                                      title={isUploader && !canManageProject ? "Delete (Available for 7 mins)" : "Delete File"}
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  );
+                                })()}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -941,14 +1008,49 @@ export const ProjectDetails: React.FC = () => {
                   }}
                   className="flex gap-2 relative"
                 >
-                  <input
-                    type="text"
-                    value={chatText}
-                    onChange={(e) => setChatText(e.target.value)}
-                    placeholder={isProjectMember ? "Type your message..." : "Only project members can send messages"}
-                    disabled={!isProjectMember}
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
+                  <div className="flex-1 relative">
+                    {showMentions && (
+                      <div className="absolute bottom-full mb-2 left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden z-50 animate-in slide-in-from-bottom-2 duration-200">
+                        <div className="p-3 bg-slate-50 border-b border-slate-100">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Mention Team Member</p>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto p-1">
+                          {project.members
+                            .map(mId => users.find(u => u.id === mId))
+                            .filter(u => u && u.id !== user?.id && u.name.toLowerCase().includes(mentionSearch.toLowerCase()))
+                            .map(member => (
+                              <button
+                                key={member!.id}
+                                type="button"
+                                onClick={() => insertMention(member)}
+                                className="w-full flex items-center gap-3 p-2 hover:bg-indigo-50 rounded-xl transition-all group"
+                              >
+                                <MemberAvatar user={member} size="sm" />
+                                <div className="text-left">
+                                  <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{member!.name}</p>
+                                  <p className="text-[10px] text-slate-400">{member!.role}</p>
+                                </div>
+                              </button>
+                            ))
+                          }
+                          {project.members
+                            .map(mId => users.find(u => u.id === mId))
+                            .filter(u => u && u.name.toLowerCase().includes(mentionSearch.toLowerCase()))
+                            .length === 0 && (
+                            <div className="p-4 text-center text-xs text-slate-400">No members found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      value={chatText}
+                      onChange={handleChatChange}
+                      placeholder={isProjectMember ? "Type your message..." : "Only project members can send messages"}
+                      disabled={!isProjectMember}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={!chatText.trim() || !isProjectMember}

@@ -79,8 +79,8 @@ export const MOCK_PROJECTS: Project[] = [
       }
     ],
     files: [
-      { id: 'f1', name: 'Project_Requirements.pdf', type: 'pdf', size: '1.2 MB', uploadedBy: 'u2', uploadedAt: '2024-01-15T10:00:00Z' },
-      { id: 'f2', name: 'Brand_Assets.zip', type: 'zip', size: '15.5 MB', uploadedBy: 'u3', uploadedAt: '2024-02-10T14:00:00Z' }
+      { id: 'f1', name: 'Design_System_v1.pdf', url: '/uploads/1773915273827-816853694.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: '58 KB', uploadedBy: 'u1', uploadedAt: '2024-03-01T10:00:00Z' },
+      { id: 'f2', name: 'Requirements.docx', url: '/uploads/1774267252059-873636393.docx', type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: '58 KB', uploadedBy: 'u2', uploadedAt: '2024-03-10T14:30:00Z' }
     ],
     activity: MOCK_ACTIVITIES.filter(a => a.targetId === 'p1' || ['t1', 't2', 't3'].includes(a.targetId))
   },

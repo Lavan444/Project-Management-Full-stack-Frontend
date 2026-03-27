@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Briefcase, 
-  CheckSquare, 
-  Users, 
-  Clock, 
-  BarChart3, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Briefcase,
+  CheckSquare,
+  Users,
+  Clock,
+  BarChart3,
+  Settings,
   LogOut,
   X,
   ChevronDown,
@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { to: '/settings', label: 'Settings', icon: Settings, roles: ['Super Admin', 'Admin', 'Employee'] },
   ];
 
-  const filteredNavItems = navItems.filter(item => 
+  const filteredNavItems = navItems.filter(item =>
     !item.roles || (user && item.roles.includes(user.role))
   );
 
@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Mobile Overlay */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
                 <Sparkles className="text-white" size={20} />
               </div>
-              <span className="font-black text-2xl text-slate-900 tracking-tight">ProFlow</span>
+              <span className="font-black text-2xl text-slate-900 tracking-tight">PMS</span>
             </div>
             <button className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-xl transition-all" onClick={onClose}>
               <X size={20} />
@@ -84,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
               className="w-full flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-all group"
             >
@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 </div>
                 <div className="text-left">
                   <p className="text-xs font-bold text-slate-900">
-                    {user?.role === 'Super Admin' ? 'System Console' : 'ProFlow Creative'}
+                    {user?.role === 'Super Admin' ? 'System Console' : 'PMS Creative'}
                   </p>
                   <p className="text-[10px] font-medium text-slate-500">
                     {user?.role === 'Super Admin' ? 'Root Access' : 'Free Plan'}
@@ -118,8 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               onClick={() => { if (window.innerWidth < 1024) onClose(); }}
               className={({ isActive }) => cn(
                 "flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all relative group",
-                isActive 
-                  ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" 
+                isActive
+                  ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
@@ -128,7 +128,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   <item.icon size={20} className={cn("transition-transform group-hover:scale-110", isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600")} />
                   {item.label}
                   {isActive && (
-                    <motion.div 
+                    <motion.div
                       layoutId="active-nav"
                       className="absolute left-0 w-1 h-6 bg-white rounded-r-full"
                     />
@@ -140,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           {user?.role !== 'Employee' && (
             <div className="pt-8 px-4">
-              <button 
+              <button
                 onClick={() => navigate('/projects')}
                 className="w-full flex items-center justify-center gap-2 py-4 bg-slate-900 text-white rounded-[24px] text-sm font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 group"
               >
@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <MessageCircle size={16} />
               Contact Support
             </button>
-            <button 
+            <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-all"
             >

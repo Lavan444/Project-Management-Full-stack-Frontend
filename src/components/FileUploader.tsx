@@ -32,7 +32,8 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
       url: URL.createObjectURL(file), // Simulate URL
       type: file.type.split('/')[1] || 'file',
       size: formatFileSize(file.size),
-      uploadedAt: new Date().toISOString()
+      uploadedAt: new Date().toISOString(),
+      file: file // Store the original file for upload
     }));
     onChange([...attachments, ...newAttachments]);
   };
