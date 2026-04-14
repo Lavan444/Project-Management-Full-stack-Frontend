@@ -101,7 +101,7 @@ export const ProjectDetails: React.FC = () => {
 
   if (!project) return <div>Project not found</div>;
 
-  const canManageProject = user?.role === 'Super Admin' || (user?.role === 'Admin' && project.organizationId === user.organizationId);
+  const canManageProject = user?.role === 'Super Admin' || user?.role === 'Manager' || (user?.role === 'Admin' && project.organizationId === user.organizationId);
   const isProjectMember = project.members.includes(user?.id || '');
 
   // Tasks for this project — sourced from the context's tasks state (separate collection)
@@ -119,6 +119,7 @@ export const ProjectDetails: React.FC = () => {
       (task.attachments || []).map(att => ({
         id: att.id,
         name: att.name,
+        url: att.url, // URL is now prefixed by AppContext
         type: att.type,
         size: att.size,
         uploadedBy: att.uploadedBy || (task.assigneeIds?.[0] || task.assigneeId),
@@ -1037,8 +1038,8 @@ export const ProjectDetails: React.FC = () => {
                             .map(mId => users.find(u => u.id === mId))
                             .filter(u => u && u.name.toLowerCase().includes(mentionSearch.toLowerCase()))
                             .length === 0 && (
-                            <div className="p-4 text-center text-xs text-slate-400">No members found</div>
-                          )}
+                              <div className="p-4 text-center text-xs text-slate-400">No members found</div>
+                            )}
                         </div>
                       </div>
                     )}

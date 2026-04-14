@@ -31,13 +31,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
 
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['Super Admin', 'Admin', 'Employee'] },
-    { to: '/projects', label: 'Projects', icon: Briefcase, roles: ['Super Admin', 'Admin', 'Employee'] },
-    { to: '/tasks', label: 'Tasks', icon: CheckSquare, roles: ['Super Admin', 'Admin', 'Employee'] },
-    { to: '/team', label: 'Team', icon: Users, roles: ['Super Admin', 'Admin'] },
-    { to: '/timesheet', label: 'Timesheet', icon: Clock, roles: ['Super Admin', 'Admin', 'Employee'] },
-    { to: '/reports', label: 'Reports', icon: BarChart3, roles: ['Super Admin', 'Admin'] },
-    { to: '/settings', label: 'Settings', icon: Settings, roles: ['Super Admin', 'Admin', 'Employee'] },
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['Super Admin', 'Admin', 'Employee', 'Manager'] },
+    { to: '/projects', label: 'Projects', icon: Briefcase, roles: ['Super Admin', 'Admin', 'Employee', 'Manager'] },
+    { to: '/tasks', label: 'Tasks', icon: CheckSquare, roles: ['Super Admin', 'Admin', 'Employee', 'Manager'] },
+    { to: '/team', label: 'Team', icon: Users, roles: ['Super Admin', 'Admin', 'Manager'] },
+    { to: '/timesheet', label: 'Timesheet', icon: Clock, roles: ['Super Admin', 'Admin', 'Employee', 'Manager'] },
+    { to: '/reports', label: 'Reports', icon: BarChart3, roles: ['Super Admin', 'Admin', 'Manager'] },
+    { to: '/settings', label: 'Settings', icon: Settings, roles: ['Super Admin', 'Admin', 'Employee', 'Manager'] },
   ];
 
   const filteredNavItems = navItems.filter(item =>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { authApi, getToken, setToken, removeToken } from '../services/api';
+import { socketService } from '../services/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -31,6 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const res = await authApi.me();
         // Map backend _id to id for frontend compatibility
         setUser(mapUser(res.data));
+
+        socketService.connect();
       } catch {
         removeToken();
       } finally {
@@ -53,6 +56,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
+    socketService.connect()
+
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
@@ -62,6 +67,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authApi.register({ name, email, password, role: 'Employee' });
       setToken(res.data.token);
       setUser(mapUser(res.data.user));
+
+      socketService.connect();
+
+
     } catch (err: any) {
       setError(err.message || 'Registration failed');
       throw err;
@@ -71,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async () => {
+    socketService.disconnect();
     try {
       await authApi.logout();
     } catch { /* ignore */ }

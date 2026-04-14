@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { useAppContext } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { BACKEND_URL } from '../services/api';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -189,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
           >
             <div className="w-10 h-10 rounded-xl bg-indigo-100 border-2 border-white shadow-md overflow-hidden group-hover:shadow-lg transition-all">
               <img 
-                src={user?.avatar} 
+                src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${BACKEND_URL}${user.avatar}`) : undefined} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
@@ -223,7 +224,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Account</p>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-indigo-100 border-2 border-white shadow-sm overflow-hidden">
-                      <img src={user?.avatar} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img 
+                        src={user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${BACKEND_URL}${user.avatar}`) : undefined} 
+                        alt="" 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer" 
+                      />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">{user?.name}</p>

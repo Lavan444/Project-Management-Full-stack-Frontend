@@ -7,16 +7,32 @@ import { motion } from 'motion/react';
 export const ResetPassword: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
+
+  React.useEffect(() => {
+    const validateToken = async () => {
+      try {
+        const res = await authApi.getResetTokenInfo(token!);
+        setUserInfo(res.data);
+      } catch (err: any) {
+        setError(err.message || 'Reset link is invalid or has expired.');
+      } finally {
+        setIsValidating(false);
+      }
+    };
+    validateToken();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -37,7 +53,7 @@ export const ResetPassword: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Reset link is invalid or has expired.');
+      setError(err.message || 'Failed to reset password.');
     } finally {
       setIsLoading(false);
     }
@@ -45,19 +61,31 @@ export const ResetPassword: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8"
       >
-        {!success ? (
+        {isValidating ? (
+          <div className="text-center py-12 flex flex-col items-center">
+            <Loader2 className="animate-spin text-indigo-600 mb-4" size={32} />
+            <p className="text-slate-500 font-medium">Validating link...</p>
+          </div>
+        ) : !success ? (
           <>
             <div className="text-center mb-8">
               <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
                 <Lock className="text-white" size={24} />
               </div>
               <h1 className="text-2xl font-bold text-slate-900">Set New Password</h1>
-              <p className="text-slate-500 mt-2">Create a secure password for your account</p>
+              {userInfo ? (
+                <div className="mt-4 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                  <p className="text-2xl font-bold text-slate-900">{userInfo.name}</p>
+                  <p className="text-sm font-medium text-slate-500">{userInfo.email}</p>
+                </div>
+              ) : (
+                <p className="text-slate-500 mt-2">Create a secure password for your account</p>
+              )}
             </div>
 
             {error && (
@@ -67,45 +95,47 @@ export const ResetPassword: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 ml-1">New Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                    placeholder="••••••••"
-                  />
+            {!error && (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700 ml-1">New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                      placeholder="••••••••"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Confirm New Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                    placeholder="••••••••"
-                  />
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700 ml-1">Confirm New Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                      placeholder="••••••••"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-60"
-              >
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Reset Password'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-60"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : 'Reset Password'}
+                </button>
+              </form>
+            )}
           </>
         ) : (
           <div className="text-center py-4">
@@ -114,7 +144,7 @@ export const ResetPassword: React.FC = () => {
             </div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Password Reset!</h2>
             <p className="text-slate-500 mb-8">Your password has been successfully updated. Redirecting you to login...</p>
-            <Link 
+            <Link
               to="/login"
               className="text-indigo-600 font-bold hover:underline"
             >

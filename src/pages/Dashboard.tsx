@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   TrendingUp,
@@ -51,6 +52,7 @@ ChartJS.register(
 );
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { projects, users, activities, tasks } = useAppContext();
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState('Last 7 Days');
@@ -69,28 +71,26 @@ export const Dashboard: React.FC = () => {
   const getStats = () => {
     if (user?.role === 'Super Admin') {
       return [
-        // { label: 'Total Organizations', value: 12, icon: Building2, color: 'text-indigo-600', bg: 'bg-indigo-50', trend: '+2' },
-        { label: 'Total Projects', value: projects.length, icon: Layout, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+8%' },
-        { label: 'Total Users', value: users.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+15%' },
-        { label: 'System Health', value: '99.9%', icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50', trend: 'Stable' },
+        { label: 'Total Projects', value: projects.length, icon: Layout, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+8%', path: '/projects' },
+        { label: 'Total Users', value: users.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+15%', path: '/team' },
+        { label: 'System Health', value: '99.9%', icon: Shield, color: 'text-rose-600', bg: 'bg-rose-50', trend: 'Stable', path: '/reports' },
       ];
     }
 
-    if (user?.role === 'Admin') {
+    if (user?.role === 'Admin' || user?.role === 'Manager') {
       return [
-        { label: 'Team Projects', value: projects.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+12%' },
-        { label: 'Active Tasks', value: tasks.length - completedTasks, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', trend: '+5%' },
-        { label: 'Completed', value: completedTasks, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+18%' },
-        { label: 'Overdue', value: tasks.filter(t => t.status !== 'done' && isBefore(new Date(t.dueDate), new Date())).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', trend: '-2%' },
+        { label: user?.role === 'Admin' ? 'Team Projects' : 'My Projects', value: projects.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', trend: '+12%', path: '/projects' },
+        { label: 'Active Tasks', value: tasks.length - completedTasks, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', trend: '+5%', path: '/tasks' },
+        { label: 'Completed', value: completedTasks, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: '+18%', path: '/tasks' },
+        { label: 'Overdue', value: tasks.filter(t => t.status !== 'done' && isBefore(new Date(t.dueDate), new Date())).length, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', trend: '-2%', path: '/tasks' },
       ];
     }
 
     // Employee Stats
     return [
-      { label: 'My Projects', value: projects.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', trend: 'Active' },
-      { label: 'My Tasks', value: tasks.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', trend: `${inProgressTasks} In Progress` },
-      { label: 'Completed', value: completedTasks, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: 'Lifetime' },
-      // { label: 'Upcoming', value: upcomingDeadlines.length, icon: Calendar, color: 'text-rose-600', bg: 'bg-rose-50', trend: 'Next 7 Days' },
+      { label: 'My Projects', value: projects.length, icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50', trend: 'Active', path: '/projects' },
+      { label: 'My Tasks', value: tasks.length, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', trend: `${inProgressTasks} In Progress`, path: '/tasks' },
+      { label: 'Completed', value: completedTasks, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50', trend: 'Lifetime', path: '/tasks' },
     ];
   };
 
@@ -128,12 +128,14 @@ export const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
             {user?.role === 'Super Admin' ? 'System Overview' :
-              user?.role === 'Admin' ? 'Organization Dashboard' : 'My Workspace'}
+              user?.role === 'Admin' ? 'Organization Dashboard' :
+                user?.role === 'Manager' ? 'Management Workspace' : 'My Workspace'}
           </h1>
           <p className="text-slate-500 mt-1">
             {user?.role === 'Super Admin' ? 'Manage global organizations and system health.' :
               user?.role === 'Admin' ? "Welcome back! Here's what's happening across your team." :
-                "Welcome back! Here's a summary of your assigned work."}
+                user?.role === 'Manager' ? "Welcome back! Overview of your managed projects and tasks." :
+                  "Welcome back! Here's a summary of your assigned work."}
           </p>
         </div>
 
@@ -168,7 +170,8 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group cursor-pointer"
+            onClick={() => stat.path && navigate(stat.path)}
+            className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group cursor-pointer hover:border-indigo-100 hover:bg-indigo-50/5"
           >
             <div className="flex items-center justify-between mb-4">
               <div className={cn("p-3 rounded-2xl transition-colors", stat.bg)}>

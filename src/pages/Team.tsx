@@ -33,7 +33,7 @@ export const Team: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<string | null>(null);
   const [filterRole, setFilterRole] = useState('All Roles');
 
-  const canManageTeam = currentUser?.role === 'Super Admin' || currentUser?.role === 'Admin';
+  const canManageTeam = currentUser?.role === 'Super Admin' || currentUser?.role === 'Admin' || currentUser?.role === 'Manager';
 
   // Form State
   const [formData, setFormData] = useState({

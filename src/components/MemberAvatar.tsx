@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 import { User } from '../types';
+import { BACKEND_URL } from '../services/api';
 
 interface MemberAvatarProps {
   user?: User;
@@ -59,7 +60,7 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
         >
           {user.avatar ? (
             <img 
-              src={user.avatar} 
+              src={user.avatar.startsWith('http') ? user.avatar : `${BACKEND_URL}${user.avatar}`} 
               alt={user.name} 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

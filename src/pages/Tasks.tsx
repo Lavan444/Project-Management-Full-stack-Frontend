@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -31,6 +31,7 @@ import { TaskCard } from '../components/TaskCard';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { MultiSelectMembers } from '../components/MultiSelectMembers';
 import { FileUploader } from '../components/FileUploader';
+import { socketService } from '../services/socket';
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
@@ -49,7 +50,7 @@ const STATUS_COLUMNS = [
 ];
 
 export const Tasks: React.FC = () => {
-  const { tasks, projects, users, addTask, updateTask, updateTaskStatus, deleteTask } = useAppContext();
+  const { tasks, projects, users, addTask, updateTask, updateTaskStatus, deleteTask, refetchTasks } = useAppContext();
   const { user } = useAuth();
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,7 +58,7 @@ export const Tasks: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<{ projectId: string, taskId: string } | null>(null);
 
-  const canManageTasks = user?.role === 'Super Admin' || user?.role === 'Admin';
+  const canManageTasks = user?.role === 'Super Admin' || user?.role === 'Admin' || user?.role === 'Manager';
 
   // Form State
   const [formData, setFormData] = useState({
@@ -156,7 +157,46 @@ export const Tasks: React.FC = () => {
     updateTaskStatus(draggableId, destination.droppableId as any, task.projectId);
   };
 
+
+
   const getAssignee = (id: string) => users.find(u => u.id === id);
+
+  // useEffect(() => {
+  //   const socket = socketService.getSocket();
+
+  //   if (socket) {
+  //     console.log('?? Task listeners active');
+  //     projects.forEach(p => {
+  //       socketService.joinProject(p.id);
+  //     });
+  //     socket.on('task_created', () => {
+  //       console.log('?? Task created, refreshing...');
+  //       refetchTasks();
+  //     });
+  //     socket.on('task_updated', () => {
+  //       console.log('?? Task updated, refreshing...');
+  //       refetchTasks();
+  //     });
+  //     socket.on('task_deleted', () => {
+  //       console.log('??? Task deleted, refreshing...');
+  //       refetchTasks();
+  //     });
+  //     socket.on('task_status_updated', () => {
+  //       console.log('?? Task status changed, refreshing...');
+  //       refetchTasks();
+  //     });
+  //   }
+  //   return () => {
+  //     if (socket) {
+  //       projects.forEach(p => socketService.leaveProject(p.id));
+
+  //       socket.off('task_created');
+  //       socket.off('task_updated');
+  //       socket.off('task_deleted');
+  //       socket.off('task_status_updated');
+  //     }
+  //   };
+  // }, [refetchTasks, projects]);
 
   return (
     <div className="space-y-8 pb-12">

@@ -33,7 +33,6 @@ import { MultiSelectMembers } from '../components/MultiSelectMembers';
 import { FileUploader } from '../components/FileUploader';
 import { CustomSelect } from '../components/CustomSelect';
 import { socketService } from '../services/socket';
-import { BACKEND_URL } from '../services/api';
 
 const PROJECT_STATUS_OPTIONS = [
   { value: 'Active', label: 'Active', color: 'bg-blue-500' },
@@ -71,7 +70,6 @@ export const Projects: React.FC = () => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'tasks'>('details');
   const [isNewlyCreated, setIsNewlyCreated] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // useEffect(() => {
   //   const socket = socketService.getSocket();
@@ -105,7 +103,7 @@ export const Projects: React.FC = () => {
 
 
 
-  const canManageProjects = user?.role === 'Super Admin' || user?.role === 'Admin' || user?.role === 'Manager';
+  const canManageProjects = user?.role === 'Super Admin' || user?.role === 'Admin';
 
   // Form State
   const [formData, setFormData] = useState({
@@ -142,7 +140,7 @@ export const Projects: React.FC = () => {
         attachments: (project.files || []).map(f => ({
           id: f.id,
           name: f.name,
-          url: f.url ? (f.url.startsWith('http') ? f.url : `${BACKEND_URL}${f.url}`) : '',
+          url: (f as any).url || '',
           type: f.type,
           size: f.size,
           uploadedAt: f.uploadedAt
@@ -168,49 +166,46 @@ export const Projects: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
-
-    try {
-      setIsSubmitting(true);
-      if (editingProject) {
-        if (isNewlyCreated && activeTab === 'tasks') {
-          // "Save Tasks & Finish" â€” create each task via the API
-          for (const t of formData.tasks) {
-            if (!t.title?.trim()) continue;
-            await addTask(editingProject.id, {
-              title: t.title || '',
-              description: t.description || '',
-              status: (t.status as any) || 'todo',
-              priority: (t.priority as any) || 'medium',
-              dueDate: t.dueDate || formData.endDate,
-              assigneeId: (t as any).assigneeId || '',
-              assigneeIds: [],
-              subtasks: [],
-              labels: [],
-              projectId: editingProject.id,
-              comments: [],
-            });
-          }
-          setIsModalOpen(false);
-        } else {
-          // Normal edit â€” update project fields only
-          await updateProject({
-            ...editingProject,
-            ...formData,
-            tasks: editingProject.tasks,
+    if (editingProject) {
+      if (isNewlyCreated && activeTab === 'tasks') {
+        // "Save Tasks & Finish" — create each task via the API
+        for (const t of formData.tasks) {
+          if (!t.title?.trim()) continue;
+          await addTask(editingProject.id, {
+            title: t.title || '',
+            description: t.description || '',
+            status: (t.status as any) || 'todo',
+            priority: (t.priority as any) || 'medium',
+            dueDate: t.dueDate || formData.endDate,
+            assigneeId: (t as any).assigneeId || '',
+            assigneeIds: [],
+            subtasks: [],
+            labels: [],
+            projectId: editingProject.id,
+            comments: [],
           });
-
-          // Upload new attachments
-          for (const att of formData.attachments) {
-            if (att.file) {
-              await uploadFile(editingProject.id, att.file);
-            }
-          }
-
-          setIsModalOpen(false);
         }
+        setIsModalOpen(false);
       } else {
-        // Create mode
+        // Normal edit — update project fields only
+        await updateProject({
+          ...editingProject,
+          ...formData,
+          tasks: editingProject.tasks,
+        });
+
+        // Upload new attachments
+        for (const att of formData.attachments) {
+          if (att.file) {
+            await uploadFile(editingProject.id, att.file);
+          }
+        }
+
+        setIsModalOpen(false);
+      }
+    } else {
+      // Create mode
+      try {
         const created = await addProject({
           organizationId: user?.organizationId || '',
           name: formData.name,
@@ -236,11 +231,9 @@ export const Projects: React.FC = () => {
         setEditingProject(created);
         setIsNewlyCreated(true);
         setActiveTab('tasks');
+      } catch {
+        // error shown by addProject via showToast
       }
-    } catch {
-      // error shown by context
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -778,19 +771,13 @@ export const Projects: React.FC = () => {
                   )}
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className={cn(
-                      "flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-100",
-                      isSubmitting ? "opacity-50 cursor-not-allowed" : "hover:bg-indigo-700"
-                    )}
+                    className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                   >
-                    {isSubmitting 
-                      ? 'Processing...' 
-                      : !editingProject
-                        ? 'Create & Continue'
-                        : isNewlyCreated
-                          ? 'Save Tasks & Finish'
-                          : 'Save Changes'}
+                    {!editingProject
+                      ? 'Create & Continue'
+                      : isNewlyCreated
+                        ? 'Save Tasks & Finish'
+                        : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -847,4 +834,3 @@ export const Projects: React.FC = () => {
     </div>
   );
 };
-

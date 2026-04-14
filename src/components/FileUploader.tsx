@@ -18,10 +18,23 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  const ALLOWED_EXTENSIONS = ['jpeg', 'jpg', 'png', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'csv', 'mp4', 'mp3', 'svg'];
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      addFiles(Array.from(files));
+      const validFiles = (Array.from(files) as File[]).filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext && ALLOWED_EXTENSIONS.includes(ext);
+      });
+      
+      if (validFiles.length < files.length) {
+        alert('Some files were skipped because their format is not supported.');
+      }
+      
+      if (validFiles.length > 0) {
+        addFiles(validFiles);
+      }
     }
   };
 
@@ -64,7 +77,18 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files) {
-      addFiles(Array.from(files));
+      const validFiles = (Array.from(files) as File[]).filter(file => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        return ext && ALLOWED_EXTENSIONS.includes(ext);
+      });
+      
+      if (validFiles.length < files.length) {
+        alert('Some files were skipped because their format is not supported.');
+      }
+      
+      if (validFiles.length > 0) {
+        addFiles(validFiles);
+      }
     }
   };
 
@@ -83,6 +107,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
         <input
           type="file"
           multiple
+          accept=".jpeg,.jpg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.csv,.mp4,.mp3,.svg"
           className="hidden"
           ref={fileInputRef}
           onChange={handleFileChange}
